@@ -1335,6 +1335,78 @@
         }
       }
     },
+    "/fingerprints/kinds": {
+      "get": {
+        "summary": "Fingerprint Kinds",
+        "description": "Public: list supported fingerprint kinds + defaults (no auth required).",
+        "operationId": "fingerprint_kinds_fingerprints_kinds_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fingerprints": {
+      "post": {
+        "summary": "Fingerprints Endpoint",
+        "description": "Molecular fingerprints (morgan/rdkit/atompair/torsion/maccs) returned as\non-bit indices and/or a base64 bit vector. Charges 1 SMILES/molecule.",
+        "operationId": "fingerprints_endpoint_fingerprints_post",
+        "parameters": [
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FingerprintIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/auth/rotate": {
       "post": {
         "summary": "Auth Rotate",
@@ -2490,6 +2562,50 @@
           "smiles"
         ],
         "title": "DiversityIn"
+      },
+      "FingerprintIn": {
+        "properties": {
+          "smiles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 50000,
+            "minItems": 1,
+            "title": "Smiles"
+          },
+          "kind": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Kind",
+            "default": "morgan"
+          },
+          "n_bits": {
+            "type": "integer",
+            "maximum": 8192.0,
+            "minimum": 64.0,
+            "title": "N Bits",
+            "default": 2048
+          },
+          "radius": {
+            "type": "integer",
+            "maximum": 6.0,
+            "minimum": 1.0,
+            "title": "Radius",
+            "default": 2
+          },
+          "output": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Output",
+            "default": "bits"
+          }
+        },
+        "type": "object",
+        "required": [
+          "smiles"
+        ],
+        "title": "FingerprintIn"
       },
       "HTTPValidationError": {
         "properties": {

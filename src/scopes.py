@@ -35,7 +35,7 @@ def _conn() -> sqlite3.Connection:
 KNOWN_SCOPES = {
     "*", "compute", "compute:premium", "similarity", "screen", "predict",
     "conformers", "reactions", "standardize", "scaffolds", "upload",
-    "substructure", "diversity", "download", "export", "jobs", "usage",
+    "substructure", "diversity", "fingerprints", "download", "export", "jobs", "usage",
     "audit", "invoice", "key:rotate", "teams", "webhooks", "referrals",
 }
 

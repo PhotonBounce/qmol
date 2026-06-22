@@ -28,7 +28,7 @@ from src import (compute, storage, keys as keysdb, ratelimit, similarity,
                  webhooks_out, teams, prom, scaffolds, audit, rotate as rotatelib,
                  invoices, uploads, substructure, exporters,
                  cache as result_cache, diversity, sdf_out,
-                 parquet_out, usage_stats, scopes, retro, plans)
+                 parquet_out, usage_stats, scopes, retro, plans, fingerprints)
 import config
 
 ADMIN_TOKEN = os.getenv("QMOL_ADMIN_TOKEN", "")
@@ -176,6 +176,14 @@ class ScopesIn(BaseModel):
 class RetroIn(BaseModel):
     smiles: str = Field(..., min_length=1)
     max_results: int = Field(20, ge=1, le=100)
+
+
+class FingerprintIn(BaseModel):
+    smiles: List[str] = Field(..., min_length=1, max_length=50_000)
+    kind: str = Field("morgan", min_length=1)
+    n_bits: int = Field(2048, ge=64, le=8192)
+    radius: int = Field(2, ge=1, le=6)
+    output: str = Field("bits", min_length=1)
 
 class SubstructureIn(BaseModel):
     smarts: str = Field(..., min_length=1)
@@ -733,6 +741,51 @@ def scaffolds_endpoint(body: ScaffoldIn,
     keysdb.record(x_api_key, "/scaffolds", n)
     return {"n_unique_scaffolds": len(rows),
             "scaffolds": [r.to_dict() for r in rows],
+            "quota_charged": n}
+
+
+# ---------------- molecular fingerprints ----------------
+
+@app.get("/fingerprints/kinds")
+def fingerprint_kinds():
+    """Public: list supported fingerprint kinds + defaults (no auth required)."""
+    return {
+        "kinds": list(fingerprints.KINDS),
+        "outputs": list(fingerprints.OUTPUTS),
+        "defaults": {"kind": "morgan", "n_bits": 2048, "radius": 2,
+                     "output": "bits"},
+        "notes": {
+            "morgan": "ECFP-style circular; radius 2 == ECFP4",
+            "maccs": "fixed 167-bit structural keys; n_bits/radius ignored",
+        },
+    }
+
+
+@app.post("/fingerprints")
+def fingerprints_endpoint(body: FingerprintIn,
+                          x_api_key: str | None = Header(default=None)):
+    """Molecular fingerprints (morgan/rdkit/atompair/torsion/maccs) returned as
+    on-bit indices and/or a base64 bit vector. Charges 1 SMILES/molecule."""
+    if not x_api_key:
+        raise HTTPException(status_code=401, detail="Missing x-api-key header")
+    info = keysdb.lookup(x_api_key)
+    if not info or not info.active:
+        raise HTTPException(status_code=401, detail="Invalid or inactive API key")
+    _rl(f"fp:{x_api_key}", limit=60, window=60.0)
+    n = len(body.smiles)
+    used, quota = teams.effective_quota(x_api_key)
+    if used + n > quota:
+        raise HTTPException(status_code=402,
+                            detail=f"Quota would be exceeded ({used}/{quota})")
+    try:
+        results = fingerprints.compute_batch(
+            body.smiles, kind=body.kind, n_bits=body.n_bits,
+            radius=body.radius, output=body.output,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    keysdb.record(x_api_key, "/fingerprints", n)
+    return {"kind": body.kind.lower(), "n": n, "results": results,
             "quota_charged": n}
 
 
