@@ -38,8 +38,10 @@ aspirational — the shipping compute path is classical RDKit + optional PySCF H
 
 ### Module groups in `src/`
 - **Science:** `compute`, `predict` (ADMET heuristics), `screen` (drug-likeness),
-  `similarity` (Tanimoto), `conformers`, `reactions`, `substructure`, `diversity`,
-  `scaffolds`, `retro`, `standardize`, `sdf_out`, `parquet_out`, `exporters`.
+  `similarity` (Tanimoto search), `simmatrix` (pairwise Tanimoto matrix),
+  `clustering` (Butina), `fingerprints` (ECFP/MACCS/…), `tautomers`,
+  `conformers`, `reactions`, `substructure`, `diversity`, `scaffolds`, `retro`,
+  `standardize`, `sdf_out`, `parquet_out`, `exporters`.
 - **Billing/accounts:** `keys`, `teams`, `plans`, `coupons`, `invoices`,
   `referrals`, `rotate`, `magic_link`, `scopes`.
 - **Ops:** `ratelimit`, `cache`, `audit`, `status_store`, `metrics`, `prom`,
@@ -81,7 +83,12 @@ missing PySCF → RDKit-only result. The `ComputeResult` field list, the
 
 Most endpoints follow this same shape: rate-limit → lookup → quota → do work →
 `keys.record()`. The "charge" varies per endpoint (e.g. `/predict` charges 3×,
-`/screen` 5×, `/similarity` a flat 100, `/react` 1 per product).
+`/screen` 5×, `/similarity` a flat 100, `/react` 1 per product, `/tautomers` 2×,
+and `/fingerprints` `/similarity/matrix` `/cluster` 1 per input molecule).
+Newer per-molecule endpoints route the quota check through
+`teams.effective_quota()` so team pools work; add new scopes to
+`scopes.KNOWN_SCOPES` and regenerate `landing/openapi.json`
+(`python scripts/dump_openapi.py`) when adding an endpoint.
 
 ## Worker publish pipeline (`worker.py::publish_snapshot`)
 

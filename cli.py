@@ -22,6 +22,9 @@ from src import screen as qscreen
 from src import predict as qpredict
 from src import similarity as qsimilarity
 from src import conformers as qconformers
+from src import fingerprints as qfingerprints
+from src import tautomers as qtautomers
+from src import clustering as qclustering
 from src import storage
 import config
 
@@ -123,6 +126,53 @@ def compute_file(
     else:
         df.to_csv(out, index=False)
     typer.echo(f"Wrote {len(df):,} rows -> {out}")
+
+
+@cli.command()
+def fingerprint(smiles: List[str],
+                kind: str = typer.Option("morgan", "--kind", "-k",
+                                         help="morgan|rdkit|atompair|torsion|maccs"),
+                bits: int = typer.Option(2048, "--bits"),
+                radius: int = typer.Option(2, "--radius")):
+    """Compute molecular fingerprints; prints width + on-bit count per molecule."""
+    for smi in smiles:
+        try:
+            fp = qfingerprints.compute_one(smi, kind=kind, n_bits=bits, radius=radius)
+        except ValueError as e:
+            typer.echo(f"FAIL {smi}: {e}")
+            continue
+        typer.echo(f"{smi}\t{fp.kind}\tn_bits={fp.n_bits}\ton_bits={fp.n_on_bits}")
+
+
+@cli.command()
+def tautomers(smiles: List[str],
+              max_tautomers: int = typer.Option(100, "--max")):
+    """Enumerate tautomers and print the canonical form for each molecule."""
+    for smi in smiles:
+        try:
+            r = qtautomers.enumerate_one(smi, max_tautomers=max_tautomers)
+        except ValueError as e:
+            typer.echo(f"FAIL {smi}: {e}")
+            continue
+        typer.echo(f"{smi}  canonical={r.canonical}  n={r.n_tautomers}")
+        for t in r.tautomers:
+            typer.echo(f"    {t}")
+
+
+@cli.command()
+def cluster(smiles: List[str],
+            cutoff: float = typer.Option(0.4, "--cutoff", "-c",
+                                         help="Tanimoto DISTANCE cutoff (1 - similarity)")):
+    """Butina-cluster molecules by ECFP4 distance; prints each cluster centroid."""
+    try:
+        res = qclustering.cluster(list(smiles), cutoff=cutoff)
+    except ValueError as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(1)
+    typer.echo(f"{res.n_valid} molecules -> {res.n_clusters} clusters (cutoff={cutoff})")
+    for c in res.clusters:
+        typer.echo(f"  cluster {c['cluster_id']} (n={c['size']}) "
+                   f"centroid={c['centroid']}")
 
 
 @cli.command()
