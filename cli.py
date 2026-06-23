@@ -28,6 +28,8 @@ from src import clustering as qclustering
 from src import formula as qformula
 from src import convert as qconvert
 from src import descriptors as qdescriptors
+from src import mcs as qmcs
+from src import charges as qcharges
 from src import storage
 import config
 
@@ -222,6 +224,36 @@ def descriptors(smiles: List[str],
             typer.echo(f"{smi}  " + "  ".join(f"{k}={d[k]}" for k in sel))
         else:
             typer.echo(f"{smi}  n_descriptors={len(d)}  (use --names to filter)")
+
+
+@cli.command()
+def mcs(smiles: List[str]):
+    """Maximum common substructure across 2+ molecules (prints SMARTS/SMILES)."""
+    try:
+        r = qmcs.find(list(smiles))
+    except ValueError as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(1)
+    typer.echo(f"{r.n_valid} molecules  atoms={r.num_atoms} bonds={r.num_bonds}  "
+               f"completed={r.completed}")
+    typer.echo(f"  SMARTS: {r.smarts}")
+    if r.smiles:
+        typer.echo(f"  SMILES: {r.smiles}")
+
+
+@cli.command()
+def charges(smiles: List[str],
+            include_hs: bool = typer.Option(False, "--hs", help="include hydrogens")):
+    """Gasteiger partial atomic charges (heavy atoms by default)."""
+    for smi in smiles:
+        try:
+            r = qcharges.compute_one(smi, include_hs=include_hs)
+        except ValueError as e:
+            typer.echo(f"FAIL {smi}: {e}")
+            continue
+        typer.echo(f"{smi}  total={r.total_charge}")
+        for a in r.atoms:
+            typer.echo(f"    {a['idx']:>3} {a['symbol']:<2} {a['charge']}")
 
 
 @cli.command()

@@ -69,3 +69,22 @@ def test_cli_descriptors_full_count():
     r = runner.invoke(qmol_cli, ["descriptors", "CCO"])
     assert r.exit_code == 0
     assert "n_descriptors=" in r.output
+
+
+def test_cli_mcs():
+    r = runner.invoke(qmol_cli, ["mcs", "c1ccccc1C(=O)O", "c1ccccc1C(=O)N"])
+    assert r.exit_code == 0
+    assert "SMARTS:" in r.output
+    assert "atoms=" in r.output
+
+
+def test_cli_mcs_needs_two_exits_nonzero():
+    r = runner.invoke(qmol_cli, ["mcs", "c1ccccc1"])
+    assert r.exit_code == 1
+
+
+def test_cli_charges():
+    r = runner.invoke(qmol_cli, ["charges", "CCO"])
+    assert r.exit_code == 0
+    assert "total=" in r.output
+    assert " O " in r.output           # oxygen atom row
