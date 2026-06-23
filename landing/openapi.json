@@ -1264,6 +1264,61 @@
         }
       }
     },
+    "/stereoisomers": {
+      "post": {
+        "summary": "Stereoisomers Endpoint",
+        "description": "Enumerate distinct stereoisomers (expands undefined stereocenters /\ndouble-bond geometry). Charges 2 SMILES/molecule.",
+        "operationId": "stereoisomers_endpoint_stereoisomers_post",
+        "parameters": [
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StereoIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/convert": {
       "post": {
         "summary": "Convert Endpoint",
@@ -3616,6 +3671,36 @@
           "smiles"
         ],
         "title": "StandardizeIn"
+      },
+      "StereoIn": {
+        "properties": {
+          "smiles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 1000,
+            "minItems": 1,
+            "title": "Smiles"
+          },
+          "max_isomers": {
+            "type": "integer",
+            "maximum": 1024.0,
+            "minimum": 1.0,
+            "title": "Max Isomers",
+            "default": 64
+          },
+          "only_unassigned": {
+            "type": "boolean",
+            "title": "Only Unassigned",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "smiles"
+        ],
+        "title": "StereoIn"
       },
       "SubstructureIn": {
         "properties": {

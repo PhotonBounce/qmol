@@ -31,6 +31,7 @@ from src import descriptors as qdescriptors
 from src import mcs as qmcs
 from src import charges as qcharges
 from src import alerts as qalerts
+from src import stereoisomers as qstereo
 from src import storage
 import config
 
@@ -272,6 +273,22 @@ def alerts(smiles: List[str]):
         typer.echo(f"{smi}  {r.n_alerts} alerts  {r.catalogs_hit}")
         for a in r.alerts:
             typer.echo(f"    {a['catalog']:<8} {a['description']}")
+
+
+@cli.command()
+def stereoisomers(smiles: List[str],
+                  max_isomers: int = typer.Option(64, "--max")):
+    """Enumerate distinct stereoisomers per molecule."""
+    for smi in smiles:
+        try:
+            r = qstereo.enumerate_one(smi, max_isomers=max_isomers)
+        except ValueError as e:
+            typer.echo(f"FAIL {smi}: {e}")
+            continue
+        flag = " (truncated)" if r.truncated else ""
+        typer.echo(f"{smi}  n={r.n_isomers}{flag}")
+        for iso in r.isomers:
+            typer.echo(f"    {iso}")
 
 
 @cli.command()

@@ -30,7 +30,7 @@ from src import (compute, storage, keys as keysdb, ratelimit, similarity,
                  cache as result_cache, diversity, sdf_out,
                  parquet_out, usage_stats, scopes, retro, plans, fingerprints,
                  simmatrix, tautomers, clustering, formula, descriptors, convert,
-                 mcs, charges, alerts)
+                 mcs, charges, alerts, stereoisomers)
 import config
 
 ADMIN_TOKEN = os.getenv("QMOL_ADMIN_TOKEN", "")
@@ -231,6 +231,12 @@ class ChargesIn(BaseModel):
 
 class AlertsIn(BaseModel):
     smiles: List[str] = Field(..., min_length=1, max_length=10_000)
+
+
+class StereoIn(BaseModel):
+    smiles: List[str] = Field(..., min_length=1, max_length=1000)
+    max_isomers: int = Field(64, ge=1, le=1024)
+    only_unassigned: bool = True
 
 class SubstructureIn(BaseModel):
     smarts: str = Field(..., min_length=1)
@@ -839,6 +845,35 @@ def tautomers_endpoint(body: TautomerIn,
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     keysdb.record(x_api_key, "/tautomers", charge)
+    return {"results": results, "quota_charged": charge}
+
+
+# ---------------- stereoisomer enumeration ----------------
+
+@app.post("/stereoisomers")
+def stereoisomers_endpoint(body: StereoIn,
+                           x_api_key: str | None = Header(default=None)):
+    """Enumerate distinct stereoisomers (expands undefined stereocenters /
+    double-bond geometry). Charges 2 SMILES/molecule."""
+    if not x_api_key:
+        raise HTTPException(status_code=401, detail="Missing x-api-key header")
+    info = keysdb.lookup(x_api_key)
+    if not info or not info.active:
+        raise HTTPException(status_code=401, detail="Invalid or inactive API key")
+    _rl(f"stereo:{x_api_key}", limit=30, window=60.0)
+    charge = 2 * len(body.smiles)
+    used, quota = teams.effective_quota(x_api_key)
+    if used + charge > quota:
+        raise HTTPException(status_code=402,
+                            detail=f"Quota would be exceeded ({used}/{quota})")
+    try:
+        results = stereoisomers.enumerate_batch(
+            body.smiles, max_isomers=body.max_isomers,
+            only_unassigned=body.only_unassigned,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    keysdb.record(x_api_key, "/stereoisomers", charge)
     return {"results": results, "quota_charged": charge}
 
 
