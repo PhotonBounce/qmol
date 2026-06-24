@@ -91,7 +91,7 @@ async def _scope_middleware(request: Request, call_next):
     key = request.headers.get("x-api-key")
     path = request.url.path
     if key and path not in ("/", "/health", "/metrics") \
-            and not path.startswith(("/admin", "/badge", "/key")):
+            and not path.startswith(("/admin", "/badge", "/key", "/account")):
         try:
             from src import scopes as _scopes
             if not _scopes.allowed(key, path):
@@ -565,6 +565,44 @@ def predict_endpoint(body: PredictIn, x_api_key: str | None = Header(default=Non
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+# ---------------- account: export + delete (GDPR / Play "delete my account") ----------------
+
+@app.get("/account/export")
+def account_export(x_api_key: str | None = Header(default=None)):
+    """Export all data held for the caller's account (GDPR portability)."""
+    if not x_api_key:
+        raise HTTPException(status_code=401, detail="Missing x-api-key header")
+    info = keysdb.lookup(x_api_key)
+    if not info:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    return {
+        "account": {"email": info.email, "tier": info.tier,
+                    "monthly_quota": info.monthly_quota, "active": info.active},
+        "used_this_month": keysdb.month_usage(x_api_key),
+        "usage_by_day": usage_stats.daily_counts(x_api_key, days=365),
+        "usage_by_endpoint": usage_stats.endpoint_breakdown(x_api_key, days=365),
+        "recent_requests": audit.recent(x_api_key, limit=1000),
+    }
+
+
+@app.delete("/account")
+def account_delete(x_api_key: str | None = Header(default=None)):
+    """Permanently delete the caller's account and all associated data.
+
+    Irreversible. Removes every key under the same email plus usage, audit,
+    scopes, team memberships, webhooks, and referral data.
+    """
+    if not x_api_key:
+        raise HTTPException(status_code=401, detail="Missing x-api-key header")
+    if not keysdb.lookup(x_api_key):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    try:
+        result = keysdb.delete_account(x_api_key)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Account not found")
+    return {"deleted": True, **result}
 
 
 # ---------------- screening report ----------------
