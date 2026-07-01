@@ -2,8 +2,16 @@ name: app-screens
 
 # Renders the Flutter app (web build) and screenshots each screen, committing
 # them to docs/app-screens/ so they can be reviewed without an emulator.
-# Manual trigger only (Actions → app-screens → Run workflow).
+# Runs when the app or this workflow changes. Its output commit only touches
+# docs/app-screens/**, which is NOT in the paths filter, so it can't re-trigger
+# itself. Also manually runnable once this is on the default branch.
 on:
+  push:
+    branches: [claude/epic-mendel-a7r40z, main, master]
+    paths:
+      - "mobile/**"
+      - ".github/workflows/app-screens.yml"
+      - ".github/scripts/app-shots-trigger"
   workflow_dispatch:
 
 jobs:
