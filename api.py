@@ -1625,6 +1625,12 @@ def _serve_landing(filename: str):
     raise HTTPException(status_code=404, detail="not found")
 
 
+@app.get("/app.html", include_in_schema=False)
+def web_app_page():
+    """The browser web app: log in, compute a descriptor panel, export CSV."""
+    return _serve_landing("app.html")
+
+
 @app.get("/privacy", include_in_schema=False)
 def privacy_page():
     """Public privacy policy (stable URL for app stores / payment providers)."""
