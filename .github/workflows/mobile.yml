@@ -28,4 +28,15 @@ jobs:
         run: flutter analyze || echo "::warning::flutter analyze reported issues"
       - name: build debug APK (the gate)
         working-directory: /tmp/qmol_app
-        run: flutter build apk --debug --dart-define=QMOL_API=https://example.com
+        run: flutter build apk --debug --dart-define=QMOL_API=https://qua-22p1.onrender.com
+      # Expose the built APK as a downloadable artifact so it can be sideloaded
+      # and tested straight from the Actions run (no signing/release needed).
+      - name: Stage APK
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          cp /tmp/qmol_app/build/app/outputs/flutter-apk/app-debug.apk "$GITHUB_WORKSPACE/dist/qmol-debug.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qmol-debug-apk
+          path: dist/qmol-debug.apk
+          if-no-files-found: error
