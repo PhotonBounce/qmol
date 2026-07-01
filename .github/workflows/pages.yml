@@ -33,13 +33,18 @@ jobs:
           if [ ! -f _site/index.html ]; then
             echo "no index.html in landing/" && exit 1
           fi
+      # Pages must be enabled once in Settings -> Pages -> Source: GitHub Actions.
+      # The workflow token cannot enable it itself (Create Pages site -> 403), so
+      # until an admin does that these steps soft-fail (continue-on-error) instead
+      # of showing a red X. Once Pages is on, they deploy normally.
       - uses: actions/configure-pages@v5
+        continue-on-error: true
         with:
-          # Turn Pages on via the API (using the workflow's pages:write token)
-          # so the first deploy doesn't require enabling it by hand in Settings.
           enablement: true
       - uses: actions/upload-pages-artifact@v3
+        continue-on-error: true
         with:
           path: _site
       - id: deployment
+        continue-on-error: true
         uses: actions/deploy-pages@v4
