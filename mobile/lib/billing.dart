@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'api.dart';
@@ -15,14 +16,36 @@ const Set<String> kProductIds = {kProductResearch, kProductCommercial};
 class Billing {
   Billing(this.api);
   final QmolApi api;
-  final InAppPurchase _iap = InAppPurchase.instance;
+
+  /// In-app purchase is only supported on the mobile plaforms in_app_purchase
+  /// ships (Android here). On Flutter web there is no plugin, and touching
+  /// `InAppPurchase.instance` throws — so we never access it unless [supported].
+  bool get supported => !kIsWeb;
+
+  InAppPurchase? _iapCached;
+  InAppPurchase get _iap => _iapCached ??= InAppPurchase.instance;
   StreamSubscription<List<PurchaseDetails>>? _sub;
 
-  Future<bool> available() => _iap.isAvailable();
+  /// True only where Play Billing can actually run. Returns false (never throws)
+  /// on web or any device without a billing backend, so callers can show a
+  /// graceful "use the website" fallback instead of crashing.
+  Future<bool> available() async {
+    if (!supported) return false;
+    try {
+      return await _iap.isAvailable();
+    } catch (_) {
+      return false;
+    }
+  }
 
   Future<List<ProductDetails>> products() async {
-    final resp = await _iap.queryProductDetails(kProductIds);
-    return resp.productDetails;
+    if (!supported) return const [];
+    try {
+      final resp = await _iap.queryProductDetails(kProductIds);
+      return resp.productDetails;
+    } catch (_) {
+      return const [];
+    }
   }
 
   /// Begin listening for purchase updates. On a completed purchase the token is
@@ -31,6 +54,7 @@ class Billing {
     required void Function(String apiKey) onKey,
     required void Function(String error) onError,
   }) {
+    if (!supported) return;
     _sub ??= _iap.purchaseStream.listen((purchases) async {
       for (final p in purchases) {
         switch (p.status) {
@@ -55,8 +79,11 @@ class Billing {
     });
   }
 
-  Future<void> buy(ProductDetails product) =>
-      _iap.buyNonConsumable(purchaseParam: PurchaseParam(productDetails: product));
+  Future<void> buy(ProductDetails product) async {
+    if (!supported) return;
+    await _iap.buyNonConsumable(
+        purchaseParam: PurchaseParam(productDetails: product));
+  }
 
   /// The purchase token the Play Developer API verifies against. NOTE: confirm
   /// this against your installed in_app_purchase_android version before release.

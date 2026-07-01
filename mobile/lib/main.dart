@@ -14,6 +14,7 @@ const String kApiBase = String.fromEnvironment(
 );
 const String kPrivacyUrl = '$kApiBase/privacy';
 const String kTermsUrl = '$kApiBase/terms';
+const String kPricingUrl = '$kApiBase/app';
 
 void main() => runApp(const QmolApp());
 
