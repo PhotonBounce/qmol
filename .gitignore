@@ -12,3 +12,5 @@ logs/
 .vscode/
 hf_cache/
 screenshots/
+# CLI `qmol conformer` writes this to the cwd by default (a scratch artifact)
+/conformer.sdf
