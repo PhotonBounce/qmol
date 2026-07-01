@@ -52,6 +52,7 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
   Future<void> _load() async {
     try {
       final available = await widget.billing.available();
+      if (!mounted) return;
       if (!available) {
         setState(() {
           _billingAvailable = false;
@@ -60,12 +61,14 @@ class _SubscribeScreenState extends State<SubscribeScreen> {
         return;
       }
       final p = await widget.billing.products();
+      if (!mounted) return;
       setState(() {
         _billingAvailable = true;
         _products = p;
         _loading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _msg = e.toString();
         _loading = false;

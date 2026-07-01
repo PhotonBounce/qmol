@@ -40,7 +40,7 @@ class _ComputeScreenState extends State<ComputeScreen> {
       await Store.setKey(k);
       widget.onKey(k);
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -56,9 +56,10 @@ class _ComputeScreenState extends State<ComputeScreen> {
     try {
       final r = await widget.api
           .descriptors(key, [_smiles.text.trim()], names: _shown);
+      if (!mounted) return;
       setState(() => _results = r);
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _busy = false);
     }
