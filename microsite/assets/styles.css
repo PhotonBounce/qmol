@@ -93,6 +93,34 @@ p.lead { text-align: center; color: var(--muted); max-width: 620px; margin: 0 au
 footer { border-top: 1px solid var(--line); padding: 30px 0; color: var(--muted); font-size: 14px; margin-top: 40px; }
 footer .container { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 
+/* ---- web app (app.html) ---- */
+.app-main { padding: 34px 0 60px; }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; margin: 0 0 20px; }
+.panel h2 { margin: 0 0 4px; font-size: 20px; }
+.panel .hint { color: var(--muted); font-size: 14px; margin: 0 0 14px; }
+label.fld { display: block; font-size: 13px; color: var(--muted); margin: 0 0 6px; font-weight: 600; }
+input.in, textarea.in, select.in {
+  width: 100%; background: var(--bg2); border: 1px solid var(--line); color: var(--ink);
+  border-radius: 10px; padding: 11px 12px; font: inherit; }
+textarea.in { min-height: 96px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+.row > * { flex: 1 1 auto; }
+.row .grow { flex: 3 1 240px; }
+.muted { color: var(--muted); }
+.pill { display: inline-block; background: var(--bg2); border: 1px solid var(--line); border-radius: 999px;
+  padding: 3px 12px; font-size: 13px; color: var(--brand2); }
+.err { color: #fca5a5; font-size: 14px; margin: 10px 0 0; }
+.ok { color: var(--accent); font-size: 14px; margin: 10px 0 0; }
+.tablewrap { overflow-x: auto; margin-top: 14px; border: 1px solid var(--line); border-radius: 10px; }
+table.res { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.res th, table.res td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.res th { background: var(--bg2); color: var(--brand2); position: sticky; top: 0; }
+table.res tbody tr:hover { background: rgba(56,189,248,.05); }
+.spin { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--line); border-top-color: var(--brand);
+  border-radius: 50%; animation: sp 0.7s linear infinite; vertical-align: -3px; }
+@keyframes sp { to { transform: rotate(360deg); } }
+.small { font-size: 13px; }
+
 /* consent banner */
 #consent { position: fixed; bottom: 0; left: 0; right: 0; z-index: 50; background: var(--bg2);
   border-top: 1px solid var(--line); padding: 14px 20px; display: none; }

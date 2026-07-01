@@ -9,6 +9,7 @@
 <meta property="og:description" content="Descriptors, fingerprints, similarity, screening, ADMET — API + Android app." />
 <meta property="og:type" content="website" />
 <link rel="preconnect" href="https://qua-22p1.onrender.com" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2713%27 fill=%27%2338bdf8%27/%3E%3C/svg%3E" />
 <link rel="stylesheet" href="assets/styles.css" />
 
 <!--
@@ -27,7 +28,8 @@
     <div class="brand"><span class="dot"></span> Q-Mol</div>
     <nav>
       <a href="#features">Features</a>
-      <a href="#app">App</a>
+      <a href="app.html">Web app</a>
+      <a href="#app">Android</a>
       <a href="#pricing">Pricing</a>
       <a href="https://qua-22p1.onrender.com/reference">API</a>
     </nav>
@@ -42,8 +44,8 @@
         and ADMET — from a SMILES string. Use the API, the CLI, or the Android app.
         Free tier, no credit card.</p>
       <div class="cta-row">
+        <a class="btn primary" href="app.html">Open the web app</a>
         <a class="play-badge" href="#app"><span>▶</span><span><small>Get it on</small><b>Google Play</b></span></a>
-        <a class="btn primary" href="https://qua-22p1.onrender.com/app">Get a free API key</a>
         <a class="btn ghost" href="https://qua-22p1.onrender.com/reference">Browse the API</a>
       </div>
     </div>
@@ -81,9 +83,12 @@
             <li>Privacy-first: minimal permissions, clear data controls</li>
           </ul>
           <div class="cta-row" style="justify-content:flex-start">
+            <a class="btn primary" href="https://github.com/PhotonBounce/qmol/releases/latest/download/qmol-debug.apk">Download APK (test build)</a>
             <a class="play-badge" href="#"><span>▶</span><span><small>Get it on</small><b>Google Play</b></span></a>
           </div>
-          <p style="color:var(--muted);font-size:13px">Coming soon to Google Play.</p>
+          <p style="color:var(--muted);font-size:13px">
+            The APK is a <b>debug test build</b> (debug-signed) for sideloading — enable
+            “Install unknown apps” on your device, then open the file. Play Store release coming soon.</p>
         </div>
         <div>
           <img class="shot" src="assets/shot-dashboard.png" alt="Q-Mol usage dashboard" loading="lazy" />

@@ -1,0 +1,60 @@
+name: release-apk
+
+# Builds the Android APK (a debug/test build, sideloadable) and publishes it as
+# a GitHub Release asset named qmol-debug.apk — the exact file the microsite's
+# "Download APK" button links to (…/releases/latest/download/qmol-debug.apk).
+#
+# Trigger by pushing a tag like `app-v1.0.0`, or run manually (workflow_dispatch).
+on:
+  push:
+    tags: ["app-v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to create (e.g. app-v1.0.0)"
+        required: true
+        default: "app-v0.1.0"
+
+permissions:
+  contents: write   # needed to create the release
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Build debug APK (points at the live API)
+        run: |
+          flutter create --org app.qmol --project-name qmol /tmp/app
+          cp -r mobile/lib mobile/pubspec.yaml mobile/analysis_options.yaml /tmp/app/
+          cd /tmp/app
+          flutter pub get
+          flutter build apk --debug --dart-define=QMOL_API=https://qua-22p1.onrender.com
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          cp build/app/outputs/flutter-apk/app-debug.apk "$GITHUB_WORKSPACE/dist/qmol-debug.apk"
+          ls -la "$GITHUB_WORKSPACE/dist"
+
+      # Also expose it as a workflow artifact (downloadable from the Actions run).
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qmol-debug-apk
+          path: dist/qmol-debug.apk
+
+      - name: Publish GitHub Release with the APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: Q-Mol Android ${{ github.event.inputs.tag || github.ref_name }}
+          body: |
+            Q-Mol Android **test build** (debug APK, sideloadable).
+
+            - Points at the live API `https://qua-22p1.onrender.com`.
+            - Enable "Install unknown apps" on your device, then open `qmol-debug.apk`.
+            - This is not a Play Store release and is unsigned for production.
+          files: dist/qmol-debug.apk
+          draft: false
+          prerelease: true

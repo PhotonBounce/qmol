@@ -7,6 +7,7 @@ it's served at a domain root, a `/qmol` subfolder, or a subdomain.
 ```
 microsite/
   index.html        home (hero, features, app, pricing, ad slots)
+  app.html          the web app — log in, compute descriptors, export CSV
   privacy.html      privacy policy (covers cookies + AdSense)
   terms.html        terms of service
   assets/
@@ -14,6 +15,17 @@ microsite/
     shot-dashboard.png
     ads.txt         AdSense ads.txt — move to the DOMAIN ROOT when you enable ads
 ```
+
+`app.html` is a self-contained browser app that calls the live API
+(`https://qua-22p1.onrender.com`, overridable via `window.QMOL_API`). CORS is
+open on the API, so it works from any origin. Users sign in with an API key (or
+get a free one), compute a molecular-property panel from SMILES, and download
+the results as CSV. It never stores or transmits anything except to the API to
+return the user's own results.
+
+The home page's **Download APK** button points at
+`…/releases/latest/download/qmol-debug.apk`, published by the `release-apk`
+workflow (push a `app-v*` tag or run it manually).
 
 ## Deploy — automatic (recommended)
 

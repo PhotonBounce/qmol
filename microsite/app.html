@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Q-Mol — web app</title>
+<meta name="description" content="Q-Mol web app: log in, compute molecular descriptors from SMILES, and export the results as CSV. Powered by RDKit." />
+<link rel="preconnect" href="https://qua-22p1.onrender.com" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2713%27 fill=%27%2338bdf8%27/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+
+<header class="nav">
+  <div class="container">
+    <a class="brand" href="index.html" style="color:inherit"><span class="dot"></span> Q-Mol</a>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="index.html#pricing">Pricing</a>
+      <a href="https://qua-22p1.onrender.com/reference">API</a>
+    </nav>
+  </div>
+</header>
+
+<main class="app-main">
+  <div class="container">
+
+    <h1 style="margin:0 0 6px">Q-Mol web app</h1>
+    <p class="muted" style="margin:0 0 24px">
+      Log in, compute a full molecular-property panel from any SMILES, and export the data as CSV —
+      right in your browser. Your structures are sent to the API only to compute your results;
+      <b>we never sell or redistribute the structures you submit</b>.
+    </p>
+
+    <!-- ACCOUNT / LOGIN -->
+    <section class="panel" id="authPanel">
+      <h2>Account</h2>
+      <p class="hint" id="authHint">Sign in with your API key, or get a free one (500 molecules/month, no card).</p>
+
+      <div id="loggedOut">
+        <div class="row">
+          <div class="grow">
+            <label class="fld" for="email">Get a free key — your email</label>
+            <input class="in" id="email" type="email" placeholder="you@lab.org" autocomplete="email" />
+          </div>
+          <button class="btn primary" id="btnSignup" type="button">Get free key</button>
+        </div>
+        <div class="row" style="margin-top:14px">
+          <div class="grow">
+            <label class="fld" for="keyIn">…or paste an existing API key</label>
+            <input class="in" id="keyIn" type="text" placeholder="qmol_…" autocomplete="off" spellcheck="false" />
+          </div>
+          <button class="btn ghost" id="btnUseKey" type="button">Use key</button>
+        </div>
+        <p class="err" id="authErr" hidden></p>
+      </div>
+
+      <div id="loggedIn" hidden>
+        <div class="row" style="align-items:center">
+          <div class="grow">
+            <div>Signed in — key <span class="pill" id="keyMask"></span></div>
+            <div class="muted small" id="usageLine" style="margin-top:6px">Loading usage…</div>
+          </div>
+          <button class="btn ghost" id="btnSignout" type="button">Sign out</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- COMPUTE -->
+    <section class="panel" id="computePanel" hidden>
+      <h2>Compute molecular data</h2>
+      <p class="hint">One SMILES per line (or comma-separated). You get a property panel per molecule; download it as CSV.</p>
+      <label class="fld" for="smiles">SMILES</label>
+      <textarea class="in" id="smiles" spellcheck="false">CC(=O)Oc1ccccc1C(=O)O
+c1ccccc1
+CCO
+CN1C=NC2=C1C(=O)N(C(=O)N2C)C</textarea>
+      <div class="row" style="margin-top:12px">
+        <div style="flex:0 0 auto">
+          <label class="fld" for="panel">Panel</label>
+          <select class="in" id="panel">
+            <option value="curated" selected>Curated (9 key properties)</option>
+            <option value="full">Full RDKit panel (~200)</option>
+          </select>
+        </div>
+        <div style="flex:0 0 auto; display:flex; gap:10px; align-items:flex-end">
+          <button class="btn primary" id="btnCompute" type="button">Compute</button>
+          <button class="btn ghost" id="btnCsv" type="button" disabled>Download CSV</button>
+        </div>
+      </div>
+      <p class="err" id="compErr" hidden></p>
+      <p class="ok" id="compOk" hidden></p>
+      <div class="tablewrap" id="tableWrap" hidden><table class="res" id="resTable"></table></div>
+    </section>
+
+    <!-- DATASET -->
+    <section class="panel">
+      <h2>Bulk molecular dataset</h2>
+      <p class="hint">
+        Q-Mol also publishes a growing dataset of PubChem-derived molecules with computed properties
+        (public-domain source structures). Pull it in bulk instead of one SMILES at a time:
+      </p>
+      <div class="cta-row" style="justify-content:flex-start">
+        <a class="btn ghost" href="https://qua-22p1.onrender.com/reference">API reference</a>
+        <a class="btn ghost" href="https://qua-22p1.onrender.com/plans">Plans &amp; quotas</a>
+      </div>
+      <p class="muted small" style="margin-top:12px">
+        Commercial redistribution of the bulk dataset requires the Commercial plan.
+        See the <a href="terms.html">Terms</a> and <a href="privacy.html">Privacy Policy</a>.
+      </p>
+    </section>
+
+  </div>
+</main>
+
+<footer>
+  <div class="container">
+    <div>© 2026 Photon Bounce · Q-Mol. Descriptors via RDKit; source structures from PubChem (public domain).</div>
+    <div><a href="index.html">Home</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+  var API = (window.QMOL_API || "https://qua-22p1.onrender.com").replace(/\/$/, "");
+  var CURATED = ["MolWt","MolLogP","TPSA","NumHDonors","NumHAcceptors",
+                 "NumRotatableBonds","RingCount","FractionCSP3","qed"];
+  var lastRows = [];   // [{smiles, descriptors:{}}] for CSV export
+  var lastCols = [];
+
+  function $(id) { return document.getElementById(id); }
+  function show(el, on) { el.hidden = !on; }
+  function getKey() { return localStorage.getItem("qm_key") || ""; }
+  function setKey(k) { if (k) localStorage.setItem("qm_key", k); else localStorage.removeItem("qm_key"); }
+
+  function api(path, opts) {
+    opts = opts || {};
+    var headers = { "content-type": "application/json" };
+    if (opts.auth) headers["x-api-key"] = getKey();
+    return fetch(API + path, {
+      method: opts.method || "GET",
+      headers: headers,
+      body: opts.body ? JSON.stringify(opts.body) : undefined
+    }).then(function (r) {
+      return r.text().then(function (t) {
+        var j = {};
+        try { j = t ? JSON.parse(t) : {}; } catch (e) { j = { detail: t }; }
+        if (!r.ok) throw new Error((j && j.detail) ? j.detail : ("HTTP " + r.status));
+        return j;
+      });
+    });
+  }
+
+  // ---- auth UI ----
+  function renderAuth() {
+    var k = getKey();
+    show($("loggedOut"), !k);
+    show($("loggedIn"), !!k);
+    show($("computePanel"), !!k);
+    if (k) {
+      $("keyMask").textContent = k.slice(0, 9) + "…" + k.slice(-4);
+      loadUsage();
+    }
+  }
+
+  function loadUsage() {
+    $("usageLine").textContent = "Loading usage…";
+    api("/usage", { auth: true }).then(function (u) {
+      var used = u.used_this_month, quota = u.monthly_quota;
+      $("usageLine").textContent = "Tier " + (u.tier || "?") + " · " + used + " / " + quota + " molecules this month";
+    }).catch(function (e) {
+      $("usageLine").textContent = "Could not load usage: " + e.message;
+    });
+  }
+
+  function authErr(msg) { var el = $("authErr"); el.textContent = msg; show(el, !!msg); }
+
+  $("btnSignup").addEventListener("click", function () {
+    authErr("");
+    var email = $("email").value.trim();
+    if (!email) { authErr("Enter an email to get a free key."); return; }
+    this.disabled = true; this.textContent = "Working…";
+    var btn = this;
+    api("/signup", { method: "POST", body: { email: email } }).then(function (r) {
+      setKey(r.api_key); renderAuth();
+    }).catch(function (e) { authErr(e.message); })
+      .then(function () { btn.disabled = false; btn.textContent = "Get free key"; });
+  });
+
+  $("btnUseKey").addEventListener("click", function () {
+    authErr("");
+    var k = $("keyIn").value.trim();
+    if (!k) { authErr("Paste your API key."); return; }
+    setKey(k);
+    // validate by loading usage; revert if invalid
+    api("/usage", { auth: true }).then(function () { renderAuth(); })
+      .catch(function (e) { setKey(""); authErr("That key didn't work: " + e.message); });
+  });
+
+  $("btnSignout").addEventListener("click", function () { setKey(""); renderAuth(); });
+
+  // ---- compute ----
+  function parseSmiles(text) {
+    return text.split(/[\n,]+/).map(function (s) { return s.trim(); }).filter(Boolean);
+  }
+
+  function compErr(msg) { var el = $("compErr"); el.textContent = msg; show(el, !!msg); }
+  function compOk(msg) { var el = $("compOk"); el.textContent = msg; show(el, !!msg); }
+
+  $("btnCompute").addEventListener("click", function () {
+    compErr(""); compOk("");
+    var list = parseSmiles($("smiles").value);
+    if (!list.length) { compErr("Enter at least one SMILES."); return; }
+    if (list.length > 200) { compErr("Please keep it to 200 molecules per run."); return; }
+    var full = $("panel").value === "full";
+    var body = { smiles: list };
+    if (!full) body.names = CURATED;
+    var btn = this;
+    btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Computing…';
+    $("btnCsv").disabled = true;
+    api("/descriptors", { method: "POST", auth: true, body: body }).then(function (r) {
+      renderTable(r.results || []);
+      compOk("Computed " + (r.results ? r.results.length : 0) + " molecule(s).");
+      loadUsage();
+    }).catch(function (e) { compErr(e.message); })
+      .then(function () { btn.disabled = false; btn.textContent = "Compute"; });
+  });
+
+  function renderTable(results) {
+    lastRows = results;
+    // union of descriptor keys, preserving curated order when present
+    var keys = [];
+    var seen = {};
+    results.forEach(function (row) {
+      Object.keys(row.descriptors || {}).forEach(function (k) {
+        if (!seen[k]) { seen[k] = 1; keys.push(k); }
+      });
+    });
+    lastCols = keys;
+    var t = $("resTable");
+    var head = "<thead><tr><th>SMILES</th>" + keys.map(function (k) {
+      return "<th>" + esc(k) + "</th>";
+    }).join("") + "</tr></thead>";
+    var bodyRows = results.map(function (row) {
+      var d = row.descriptors || {};
+      var tds = keys.map(function (k) { return "<td>" + fmt(d[k]) + "</td>"; }).join("");
+      return "<tr><td>" + esc(row.smiles || "") + "</td>" + tds + "</tr>";
+    }).join("");
+    t.innerHTML = head + "<tbody>" + bodyRows + "</tbody>";
+    show($("tableWrap"), true);
+    $("btnCsv").disabled = results.length === 0;
+  }
+
+  function fmt(v) {
+    if (v === null || v === undefined) return "—";
+    if (typeof v === "number") return (Math.round(v * 1000) / 1000).toString();
+    return esc(String(v));
+  }
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+
+  $("btnCsv").addEventListener("click", function () {
+    if (!lastRows.length) return;
+    var cols = lastCols;
+    var lines = ["smiles," + cols.map(csvCell).join(",")];
+    lastRows.forEach(function (row) {
+      var d = row.descriptors || {};
+      var cells = [csvCell(row.smiles || "")].concat(cols.map(function (k) {
+        var v = d[k];
+        return csvCell(v === null || v === undefined ? "" : v);
+      }));
+      lines.push(cells.join(","));
+    });
+    var blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "qmol-descriptors.csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+  });
+
+  function csvCell(v) {
+    var s = String(v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  renderAuth();
+})();
+</script>
+</body>
+</html>
